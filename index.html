@@ -2278,7 +2278,7 @@ const AGENTS = {
   criteria: [["Implementation", 30, "Code quality, sensible use of tools, clean repository and README"], ["Functionality", 30, "The agent completes its task reliably in the live demo"], ["Creativity", 20, "Originality of the idea and the agent design"], ["Practical application", 20, "How well it fits the task and could be used in real life"]],
   /* session pages, same layout as the bootcamp: duty / pr are filled in when Hüseyn sends them */
   sessions: [
-    { n: 1, date: "2026-11-22", time: "11:00–14:00", topic: "Lecture: Understanding and Building AI Agents", venue: "UFAZ, Room 201", duty: [], pr: "",
+    { n: 1, date: "2026-11-22", time: "11:00–14:00", topic: "Lecture: Understanding and Building AI Agents", venue: "UFAZ, Room 201", duty: ["ismayil", "huseyn", "salman", "huseynali"], pr: "Aytaj Rahimova",
       plan: ["What an AI agent is: how it plans a task, uses tools, checks its own result and keeps working until the task is done", "What agents can already do: processing 300 invoices into one spreadsheet, answering customer messages and reviews, running SEO and advertising tasks", "The tools: OpenCode, DeepSeek Harness and OpenRouter, shown through live demonstrations", "Agent skills and workflow automation: giving an agent knowledge and connecting it to e-mail, spreadsheets or messaging", "Safety and limits: protecting data and API keys, and where agents still make mistakes", "Project tasks: individual task assignment, rules, evaluation criteria and Q&A"] },
     { n: 2, date: "2026-11-29", time: "11:00–14:00", topic: "Project Presentations & Evaluation", venue: "UFAZ", duty: [], pr: "",
       plan: ["Opening: jury introduction, presentation order and a reminder of the criteria", "Presentations: each participant shows how their agent completes the assigned task (7 minutes) and answers jury questions (3 minutes)", "Jury deliberation; the mentor gives feedback to all participants", "Announcement of 1st, 2nd and 3rd places and certificate distribution"] },
@@ -2615,11 +2615,8 @@ function renderAgents() {
       </div>
     </div>
     ${projTabs("agents", "overview")}
-    <div class="pv-sec"><h4><span>Timeline</span><span class="legend2">12 → 29 November</span></h4>
-      <div class="circuit tl">${steps.map(([d, k, t, n, until, label], i) => {
-        const begun = new Date(d).getTime() < now, past = new Date(until || d).getTime() < now;
-        const next = !past && (until ? begun : (i === 0 || new Date(steps[i - 1][4] || steps[i - 1][0]).getTime() < now));
-        return `<div class="snode ${next ? "on" : ""} ${past ? "past" : ""}"><span class="pad"><b>${past ? "✓" : i + 1}</b></span><span class="d">${label || new Date(d).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" })}${until && begun && !past ? " · now" : ""}</span><span class="t">${k}</span><span class="note">${t}<br>${n}</span></div>`; }).join("")}</div>
+    <div class="pv-sec"><h4><span>Timeline</span><span class="legend2">Select a step · 12 → 29 November</span></h4>
+      <div class="circuit tl" id="atl"></div>
     </div>
     <div class="pv-sec"><h4><span>At a glance</span><a class="lnk" data-go="#projects/agents/details">All details ›</a></h4><div class="facts">
       <div class="fact"><div class="k">Project lead</div><div class="v">${leadChip("agents")}</div></div>
@@ -2628,45 +2625,67 @@ function renderAgents() {
       <div class="fact"><div class="k">Registration</div><div class="v">${RA.n} applied · ${RA.acc} accepted</div><a class="lnk" data-go="#insights/agents">See who applied ›</a></div>
       <div class="fact"><div class="k">Participants</div><div class="v">${RA.acc} accepted (planned 25–30)</div><a class="lnk" data-go="#projects/agents/attendance">Open the attendance tracker ›</a></div>
     </div></div>
-    <div class="pv-sec"><h4><span>Session circuit</span><span class="legend2">Select a session</span></h4><div class="circuit two" id="acircuit"></div></div>
     <div class="pv-sec"><h4><span>Attendance of ${ATT.agents.people.length} participants</span><span class="legend2"><span><i class="c-att"></i>Attended</span><span><i class="c-abs"></i>Absent</span></span></h4><div class="att" id="aatt"></div></div>
     <div class="pv-sec" id="asess"></div>`;
-  renderASessions();
+  A_STEPS = steps; renderASessions();
   tickCountdown(); clearInterval(cdTimer); cdTimer = setInterval(tickCountdown, 1000);
 }
 
 /* ----- AI Agents sessions: circuit, attendance bars and a page per session, like the bootcamp ----- */
-let curASess = Date.now() >= new Date(AGENTS.s2) ? 2 : 1;
+let A_STEPS = [], curAStep = Date.now() >= new Date(AGENTS.s2) ? 3 : 1;   /* 0 registration · 1 S1 · 2 project week · 3 S2 */
 function aStats(i) {
   const P = ATT.agents, n = P.people.length, held = Date.now() >= new Date(P.sessions[i].date + "T00:00:00+04:00").getTime();
   const m = P.people.map(p => (p.marks || "")[i] || "-");
   return { n, held, att: m.filter(x => x === "A").length, abs: m.filter(x => x === "X" || x === "E").length, open: m.filter(x => x === "-").length };
 }
+const aRing = (part, whole, r, w) => { const C = 2 * Math.PI * r, len = whole ? part / whole * C : 0;
+  return `<svg viewBox="0 0 ${2 * r + w} ${2 * r + w}"><circle cx="${r + w / 2}" cy="${r + w / 2}" r="${r}" fill="none" stroke="var(--line)" stroke-width="${w}"/><circle cx="${r + w / 2}" cy="${r + w / 2}" r="${r}" fill="none" stroke="var(--accent)" stroke-width="${w}" stroke-dasharray="${len} ${C - len}"/></svg>`; };
 function renderASessions() {
-  if (!$("acircuit")) return;
-  const S = AGENTS.sessions, tot = ATT.agents.people.length || 1;
-  const ring = (st, r, w) => { const C = 2 * Math.PI * r, len = st.att / tot * C;
-    return `<svg viewBox="0 0 ${2 * r + w} ${2 * r + w}"><circle cx="${r + w / 2}" cy="${r + w / 2}" r="${r}" fill="none" stroke="var(--line)" stroke-width="${w}"/><circle cx="${r + w / 2}" cy="${r + w / 2}" r="${r}" fill="none" stroke="var(--accent)" stroke-width="${w}" stroke-dasharray="${len} ${C - len}"/></svg>`; };
-  $("acircuit").innerHTML = S.map((s, i) => { const st = aStats(i); return `
-    <button class="snode ${s.n === curASess ? "on" : ""}" data-asess="${s.n}" aria-label="Session ${s.n}, ${fmtDate(s.date, { day: "numeric", month: "long" })}">
-      <span class="pad">${ring(st, 28, 4)}<b>S${s.n}</b></span>
-      <span class="d">${fmtDate(s.date, { weekday: "short", day: "numeric", month: "short" })}</span>
-      <span class="t">${esc(s.topic)}</span>
-    </button>`; }).join("");
-  $("aatt").innerHTML = S.map((s, i) => { const st = aStats(i); return `
-    <div class="att-row ${s.n === curASess ? "on" : ""}" data-asess="${s.n}" role="button" tabindex="0" aria-label="Session ${s.n}: ${st.held ? `${st.att} attended, ${st.abs} absent` : "not held yet"}">
+  if (!$("atl")) return;
+  const S = AGENTS.sessions, tot = ATT.agents.people.length || 1, now = Date.now(), RA = AGENTS.reg;
+  $("atl").innerHTML = A_STEPS.map(([d, k, t, n, until, label], i) => {
+    const begun = new Date(d).getTime() < now, past = new Date(until || d).getTime() < now;
+    const sIdx = i === 1 ? 0 : i === 3 ? 1 : -1, st = sIdx >= 0 ? aStats(sIdx) : null;
+    const pad = i === 0 ? aRing(RA.acc, RA.n, 28, 4) : st && st.held ? aRing(st.att, tot, 28, 4) : "";
+    return `<button class="snode ${i === curAStep ? "on" : ""} ${past ? "past" : ""}" data-astep="${i}" aria-label="${k}"><span class="pad">${pad}<b>${i === 1 ? "S1" : i === 3 ? "S2" : past ? "✓" : i + 1}</b></span><span class="d">${label || new Date(d).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" })}${until && begun && !past ? " · now" : ""}</span><span class="t">${k}</span><span class="note">${t}<br>${n}</span></button>`; }).join("");
+  $("aatt").innerHTML = S.map((s, i) => { const st = aStats(i), step = i ? 3 : 1; return `
+    <div class="att-row ${step === curAStep ? "on" : ""}" data-astep="${step}" role="button" tabindex="0" aria-label="Session ${s.n}: ${st.held ? `${st.att} attended, ${st.abs} absent` : "not held yet"}">
       <span class="lab">S${s.n} · ${fmtDate(s.date, { day: "numeric", month: "short" })}</span>
       <span class="bar">${st.held ? `<span class="c-att" style="width:${st.att / tot * 100}%" title="Attended ${st.att}"></span><span class="c-abs" style="width:${st.abs / tot * 100}%" title="Absent ${st.abs}"></span>` : ""}</span>
       <span class="num">${st.held ? `${st.att}/${tot}` : "—"}</span>
     </div>`; }).join("");
-  const i = curASess - 1, s = S[i], st = aStats(i);
-  $("asess").innerHTML = `
+  const box = $("asess");
+  if (curAStep === 0) {
+    box.innerHTML = `
+    <div class="sess-head"><div><div class="eyebrow">Step 1 of 4 · Registration · 12–15 November 2026</div><h3>${RA.n} applied, ${RA.acc} accepted</h3></div>
+      <div class="ring" aria-label="${RA.acc} of ${RA.n} accepted">${aRing(RA.acc, RA.n, 40, 8)}<div><span>${RA.acc}<small>of ${RA.n} accepted</small></span></div></div></div>
+    <div class="facts">
+      <div class="fact"><div class="k">Form open</div><div class="v">${RA.days} days · 12 Nov 19:47 → 15 Nov 22:53</div></div>
+      <div class="fact"><div class="k">Accepted</div><div class="v">${RA.acc} · highlighted green by the team</div><a class="lnk" data-go="#projects/agents/attendance">Open the tracker ›</a></div>
+      <div class="fact"><div class="k">Who applied</div><div class="v">Universities, years, fields and names</div><a class="lnk" data-go="#insights/agents">Open Insights ›</a></div>
+    </div>`;
+    return;
+  }
+  if (curAStep === 2) {
+    box.innerHTML = `
+    <div class="sess-head"><div><div class="eyebrow">Step 3 of 4 · Project week · 22 → 29 November 2026</div><h3>Each participant builds their own agent</h3></div></div>
+    <div class="facts">
+      <div class="fact"><div class="k">Deadline</div><div class="v">None · the finished agent is presented live in Session 2</div></div>
+      <div class="fact"><div class="k">Questions</div><div class="v">Online group, to the mentor and the organisers</div></div>
+      <div class="fact instr"><div class="k">Mentor</div><div class="v"><button class="mname" data-mpop="agents"><i>GG</i><span>Gadim Gadimov</span></button></div></div>
+    </div>
+    <div class="covered"><div class="k">Example tasks</div><ul>${AGENTS.tasks.map(x => `<li>${esc(x)}</li>`).join("")}</ul></div>
+    <div class="covered"><div class="k">Rules</div><ul>${AGENTS.rules.map(x => `<li>${esc(x)}</li>`).join("")}</ul></div>`;
+    return;
+  }
+  const i = curAStep === 3 ? 1 : 0, s = S[i], st = aStats(i);
+  box.innerHTML = `
     <div class="sess-head">
       <div>
         <div class="eyebrow">Session ${s.n} of ${S.length} · ${fmtDate(s.date, { weekday: "long", day: "numeric", month: "long", year: "numeric" })} · ${s.time}</div>
         <h3>${esc(s.topic)}</h3>
       </div>
-      <div class="ring" aria-label="${st.held ? `${st.att} of ${tot} attended` : "not held yet"}">${ring(st, 40, 8)}<div><span>${st.held ? st.att : "—"}<small>${st.held ? `of ${tot} attended` : "not held yet"}</small></span></div></div>
+      <div class="ring" aria-label="${st.held ? `${st.att} of ${tot} attended` : "not held yet"}">${aRing(st.held ? st.att : 0, tot, 40, 8)}<div><span>${st.held ? st.att : "—"}<small>${st.held ? `of ${tot} attended` : "not held yet"}</small></span></div></div>
     </div>
     <div class="facts">
       <div class="fact"><div class="k">Attendance</div><div class="v">${st.held ? `${st.att} attended · ${st.abs} absent${st.open ? ` · ${st.open} not marked` : ""}` : `${tot} expected · no excused (Sunday)`}</div><a class="lnk" data-go="#projects/agents/attendance">Open the tracker ›</a></div>
@@ -2679,7 +2698,7 @@ function renderASessions() {
     <h4 style="margin-top:22px"><span>Photos</span></h4>
     <div class="slot"><b>${st.held ? "Photos are on their way" : "After the session"}</b><span>Photos from Session ${s.n} will be sorted here, the same way as the bootcamp.</span></div>`;
 }
-document.addEventListener("click", e => { const b = e.target.closest("[data-asess]"); if (!b) return; curASess = +b.dataset.asess; renderASessions(); });
+document.addEventListener("click", e => { const b = e.target.closest("[data-astep]"); if (!b) return; curAStep = +b.dataset.astep; renderASessions(); });
 
 /* ----- project details: everything that is not the overview ----- */
 function renderDetails(key) {
