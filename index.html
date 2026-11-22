@@ -1855,8 +1855,7 @@ body.sky-open > .rail, body.sky-open .chat-fab { visibility: hidden; }
     <p class="note">Pick your name so the team sees who is here. You can view everything; only the owner edits.</p>
     <div class="pick-list" id="picker-list"></div>
     <div class="pk-guest"><button type="button" class="pk pk-g" id="pk-guest"><span class="pav anon">G</span><span>Guest<br><small style="margin:0">for testing · password needed</small></span></button>
-      <form id="pk-gform" hidden autocomplete="off"><input id="pk-pass" type="password" placeholder="Guest password" aria-label="Guest password" autocomplete="off"><button class="btn sm" type="submit">Enter</button><span class="madd-err" id="pk-gerr"></span></form></div>
-    <button class="btn ghost sm" id="picker-later">Not in the list · just look around</button></div>
+      <form id="pk-gform" hidden autocomplete="off"><input id="pk-pass" type="password" placeholder="Guest password" aria-label="Guest password" autocomplete="off"><button class="btn sm" type="submit">Enter</button><span class="madd-err" id="pk-gerr"></span></form></div></div>
 </div>
 <div class="overlay pv" id="guide-view" hidden role="dialog" aria-modal="true" aria-labelledby="gv-h">
   <div class="sheet">
@@ -3143,7 +3142,7 @@ const GUIDE = [
     ] },
   { id: "people", title: "Who's here", go: "", blurb: "Seeing who is online, picking your name, and how the hub knows who you are.",
     steps: [
-      { img: "home-picker", t: "Who are you?", d: "The first time someone opens the hub, it asks them to pick their name. The list has two groups: the AI & Mechatronics team and the Chapter Lead Team. Hüseyn's name is not offered to anyone else.", can: ["Pick your own name once", "Choose “Not in the list · just look around” to browse without a name"], who: "all" },
+      { img: "home-picker", t: "Who are you?", d: "The first time someone opens the hub, it asks them to pick their name. The list has two groups: the AI & Mechatronics team and the Chapter Lead Team, plus a password-protected Guest for testing. There is no way to skip it: everyone who opens the hub picks who they are.", can: ["Pick your own name once"], who: "all" },
       { img: "home-greet", t: "The greeting", d: "Right after you open the hub, a small window says hello, shows who else is online and lists everyone with when they were last here. It closes by itself after a few seconds. Chapter leads also get a short Chapter brief: the next project, projects delivered and proposals in review. The Chair also sees how many new mentors are waiting for her feedback.", can: ["Close it with ✕", "Follow “Review them ›” to the mentors that need feedback (Chair)"], who: "all" },
       { img: "home-online", t: "Online now", d: "The green “N online” pill at the top shows who has the hub open right now, like the faces in Google Sheets. Click it to see each person and which section they are looking at, plus everyone's last visit.", can: ["See who is online and where they are", "See when each person was last in the hub"], who: "all" },
       { img: "people-manage", ex: 1, t: "Manage names", d: "Under the online list, Hüseyn can see every name that was picked. He can change a pick, remove it, and confirm Madina's account as the Chair. Only after that confirmation can she write Chair feedback.", can: ["Fix a wrong name pick", "Remove a pick", "Confirm the Chair's account"], who: "owner" },
@@ -5570,11 +5569,11 @@ function openPicker() {
   if (PEOPLE.me || isOwner || !$("picker")) return;
   const taken = PEOPLE.claims.map(c => c.name);
   const pk = n => `<button class="pk" data-pick="${esc(n)}" ${taken.includes(n) ? "data-taken" : ""}>${pAv(n)}<span>${esc(n)}${chapOf(n) ? `<br><small style="margin:0;color:var(--chapter)">${esc(chapOf(n).role)}</small>` : ""}</span>${taken.includes(n) ? `<small>already picked</small>` : ""}</button>`;
-  $("picker-list").innerHTML = `<p class="pk-sub">AI &amp; Mechatronics team</p>${ROSTER_T.filter(n => n !== OWNER_NAME).map(pk).join("")}<p class="pk-sub ch">Chapter Lead Team</p>${ROSTER_C.map(pk).join("")}`;
+  $("picker-list").innerHTML = `<p class="pk-sub">AI &amp; Mechatronics team</p>${ROSTER_T.filter(n => n !== OWNER_NAME || !window.claude).map(pk).join("")}<p class="pk-sub ch">Chapter Lead Team</p>${ROSTER_C.map(pk).join("")}`;
   $("picker").hidden = false;
 }
 async function pickName(n, viaPass) {
-  if (n === OWNER_NAME && !isOwner) return;
+  if (n === OWNER_NAME && !isOwner && window.claude) return;
   PEOPLE.me = n; try { localStorage.setItem("hub-me", n); } catch (e) {}
   $("picker").hidden = true;
   if (db && PEOPLE.uid && !PREVIEW) { const ex = PEOPLE.claims.find(c => c.uid === PEOPLE.uid); (ex ? db.doc("people/" + PEOPLE.uid).update({ name: n, seen: Date.now(), ...(n === GUEST ? { guest: true } : {}) }) : db.doc("people/" + PEOPLE.uid).set({ name: n, at: Date.now(), seen: Date.now(), ...(n === GUEST ? { guest: true } : {}) })).catch(() => {}); }
