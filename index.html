@@ -402,6 +402,7 @@ h1 em { font-style: normal; color: var(--accent); }
 /* session circuit: the five sessions as nodes on a PCB trace */
 .circuit { position: relative; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; }
 .circuit::before { content: ""; position: absolute; left: 10%; right: 10%; top: 31px; height: 2px; background: repeating-linear-gradient(90deg, var(--line-2) 0 8px, transparent 8px 12px); }
+.circuit.two { grid-template-columns: repeat(2, minmax(0, 1fr)); max-width: 620px; margin: 0 auto; } .circuit.two::before { left: 25%; right: 25%; }
 .snode { position: relative; display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 0 4px 10px; border-radius: 16px; text-align: center; min-width: 0; }
 .snode .pad { position: relative; width: 62px; height: 62px; border-radius: 50%; display: grid; place-items: center; background: var(--solid); border: 1px solid var(--line-2); transition: transform .2s, box-shadow .2s; }
 .snode .pad svg { position: absolute; inset: 0; width: 100%; height: 100%; transform: rotate(-90deg); }
@@ -483,6 +484,7 @@ h1 em { font-style: normal; color: var(--accent); }
 @media (max-width: 720px) {
   .circuit { grid-template-columns: repeat(5, 92px); overflow-x: auto; padding-bottom: 6px; }
   .circuit::before { left: 46px; right: auto; width: calc(92px * 4 + 40px); }
+  .circuit.two { grid-template-columns: repeat(2, minmax(0, 1fr)); overflow: visible; } .circuit.two::before { left: 25%; right: 25%; width: auto; }
   .pv-sec, .hero { padding-left: 16px; padding-right: 16px; }
   .sess-head { grid-template-columns: 1fr; }
   .lb-stage { padding: 0 8px; }
@@ -2274,6 +2276,13 @@ const AGENTS = {
   tools: [["OpenCode", "Open-source terminal coding agent"], ["DeepSeek Harness", "Open-source, plugin-based agent framework"], ["OpenRouter", "One API key for many language models, free ones included"], ["Agent skills", "Reusable knowledge packages an agent loads"], ["Workflow automation", "Connects agents to e-mail, sheets, messaging"]],
   tasks: ["Document agent: a folder of invoices into one spreadsheet", "Customer-support agent for messages and reviews", "Content & SEO agent", "Sensor-data agent that writes a maintenance report"],
   criteria: [["Implementation", 30, "Code quality, sensible use of tools, clean repository and README"], ["Functionality", 30, "The agent completes its task reliably in the live demo"], ["Creativity", 20, "Originality of the idea and the agent design"], ["Practical application", 20, "How well it fits the task and could be used in real life"]],
+  /* session pages, same layout as the bootcamp: duty / pr are filled in when Hüseyn sends them */
+  sessions: [
+    { n: 1, date: "2026-11-22", time: "11:00–14:00", topic: "Lecture: Understanding and Building AI Agents", venue: "UFAZ, Room 201", duty: [], pr: "",
+      plan: ["What an AI agent is: how it plans a task, uses tools, checks its own result and keeps working until the task is done", "What agents can already do: processing 300 invoices into one spreadsheet, answering customer messages and reviews, running SEO and advertising tasks", "The tools: OpenCode, DeepSeek Harness and OpenRouter, shown through live demonstrations", "Agent skills and workflow automation: giving an agent knowledge and connecting it to e-mail, spreadsheets or messaging", "Safety and limits: protecting data and API keys, and where agents still make mistakes", "Project tasks: individual task assignment, rules, evaluation criteria and Q&A"] },
+    { n: 2, date: "2026-11-29", time: "11:00–14:00", topic: "Project Presentations & Evaluation", venue: "UFAZ", duty: [], pr: "",
+      plan: ["Opening: jury introduction, presentation order and a reminder of the criteria", "Presentations: each participant shows how their agent completes the assigned task (7 minutes) and answers jury questions (3 minutes)", "Jury deliberation; the mentor gives feedback to all participants", "Announcement of 1st, 2nd and 3rd places and certificate distribution"] },
+  ],
   rules: ["The agent completes the task on its own, step by step, not just chat.", "At least one Session 1 technology is used.", "API keys and private data are never shared or committed.", "Session 2 demo is live; the video is the backup."],
 };
 const HERO = "13DkcmoLlhe2UccM1jQ01talYVgR7yqLL";
@@ -2585,19 +2594,20 @@ function projCards() {
     </button>`;
 }
 function renderAgents() {
-  setHead("Project · Upcoming", PROJECTS[1].title, true);
-  const RA = AGENTS.reg;
+  const RA = AGENTS.reg, started = Date.now() >= new Date(AGENTS.s1), ended = Date.now() >= new Date(AGENTS.end);
+  const stWord = ended ? "Completed" : started ? "In progress" : "Upcoming";
+  setHead("Project · " + stWord, PROJECTS[1].title, true);
   const steps = [
     ["2026-11-12T19:00:00+04:00", "Registration", `${RA.n} applied in ${RA.days} days`, `${RA.acc} accepted`],
     [AGENTS.s1, "Session 1", "Lecture: understanding and building AI agents", "11:00–14:00 · individual tasks assigned"],
-    ["2026-11-22T14:00:00+04:00", "Project week", "Each participant builds their own agent", "No deadline · questions in the online group"],
+    ["2026-11-22T14:00:00+04:00", "Project week", "Each participant builds their own agent", "No deadline · questions in the online group", AGENTS.s2, "22 → 29 Nov"],
     [AGENTS.s2, "Session 2", "Presentations & evaluation", "7 min demo + 3 min jury Q&A · top 3 awarded"],
   ];
   const now = Date.now();
   $("pv-body").innerHTML = `
     <div class="hero hero-agents">
       <div>
-        <span class="badge soon"><i></i>Upcoming · ${PROJECTS[1].range}</span>
+        <span class="badge soon"><i></i>${stWord} · ${PROJECTS[1].range}</span>
         <div class="hero-lead">${leadChip("agents")}<span>with the whole team supporting</span></div>
         <h3>AI agents that plan, use tools and finish the job</h3>
         <p>A lecture on how agents work and how to build them, a week of individual projects, then live demos in front of a jury. Open-source tools only, no paid subscription needed.</p>
@@ -2606,9 +2616,10 @@ function renderAgents() {
     </div>
     ${projTabs("agents", "overview")}
     <div class="pv-sec"><h4><span>Timeline</span><span class="legend2">12 → 29 November</span></h4>
-      <div class="circuit tl">${steps.map(([d, k, t, n], i) => {
-        const past = new Date(d).getTime() < now, next = !past && (i === 0 || new Date(steps[i - 1][0]).getTime() < now);
-        return `<div class="snode ${next ? "on" : ""} ${past ? "past" : ""}"><span class="pad"><b>${past ? "✓" : i + 1}</b></span><span class="d">${new Date(d).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" })}</span><span class="t">${k}</span><span class="note">${t}<br>${n}</span></div>`; }).join("")}</div>
+      <div class="circuit tl">${steps.map(([d, k, t, n, until, label], i) => {
+        const begun = new Date(d).getTime() < now, past = new Date(until || d).getTime() < now;
+        const next = !past && (until ? begun : (i === 0 || new Date(steps[i - 1][4] || steps[i - 1][0]).getTime() < now));
+        return `<div class="snode ${next ? "on" : ""} ${past ? "past" : ""}"><span class="pad"><b>${past ? "✓" : i + 1}</b></span><span class="d">${label || new Date(d).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" })}${until && begun && !past ? " · now" : ""}</span><span class="t">${k}</span><span class="note">${t}<br>${n}</span></div>`; }).join("")}</div>
     </div>
     <div class="pv-sec"><h4><span>At a glance</span><a class="lnk" data-go="#projects/agents/details">All details ›</a></h4><div class="facts">
       <div class="fact"><div class="k">Project lead</div><div class="v">${leadChip("agents")}</div></div>
@@ -2617,9 +2628,58 @@ function renderAgents() {
       <div class="fact"><div class="k">Registration</div><div class="v">${RA.n} applied · ${RA.acc} accepted</div><a class="lnk" data-go="#insights/agents">See who applied ›</a></div>
       <div class="fact"><div class="k">Participants</div><div class="v">${RA.acc} accepted (planned 25–30)</div><a class="lnk" data-go="#projects/agents/attendance">Open the attendance tracker ›</a></div>
     </div></div>
-    <div class="pv-sec"><h4><span>Photos</span></h4><div class="slot"><b>Gallery opens after Session 1</b><span>Photos from 22 and 29 November will be sorted here session by session, the same way as the bootcamp.</span></div></div>`;
+    <div class="pv-sec"><h4><span>Session circuit</span><span class="legend2">Select a session</span></h4><div class="circuit two" id="acircuit"></div></div>
+    <div class="pv-sec"><h4><span>Attendance of ${ATT.agents.people.length} participants</span><span class="legend2"><span><i class="c-att"></i>Attended</span><span><i class="c-abs"></i>Absent</span></span></h4><div class="att" id="aatt"></div></div>
+    <div class="pv-sec" id="asess"></div>`;
+  renderASessions();
   tickCountdown(); clearInterval(cdTimer); cdTimer = setInterval(tickCountdown, 1000);
 }
+
+/* ----- AI Agents sessions: circuit, attendance bars and a page per session, like the bootcamp ----- */
+let curASess = Date.now() >= new Date(AGENTS.s2) ? 2 : 1;
+function aStats(i) {
+  const P = ATT.agents, n = P.people.length, held = Date.now() >= new Date(P.sessions[i].date + "T00:00:00+04:00").getTime();
+  const m = P.people.map(p => (p.marks || "")[i] || "-");
+  return { n, held, att: m.filter(x => x === "A").length, abs: m.filter(x => x === "X" || x === "E").length, open: m.filter(x => x === "-").length };
+}
+function renderASessions() {
+  if (!$("acircuit")) return;
+  const S = AGENTS.sessions, tot = ATT.agents.people.length || 1;
+  const ring = (st, r, w) => { const C = 2 * Math.PI * r, len = st.att / tot * C;
+    return `<svg viewBox="0 0 ${2 * r + w} ${2 * r + w}"><circle cx="${r + w / 2}" cy="${r + w / 2}" r="${r}" fill="none" stroke="var(--line)" stroke-width="${w}"/><circle cx="${r + w / 2}" cy="${r + w / 2}" r="${r}" fill="none" stroke="var(--accent)" stroke-width="${w}" stroke-dasharray="${len} ${C - len}"/></svg>`; };
+  $("acircuit").innerHTML = S.map((s, i) => { const st = aStats(i); return `
+    <button class="snode ${s.n === curASess ? "on" : ""}" data-asess="${s.n}" aria-label="Session ${s.n}, ${fmtDate(s.date, { day: "numeric", month: "long" })}">
+      <span class="pad">${ring(st, 28, 4)}<b>S${s.n}</b></span>
+      <span class="d">${fmtDate(s.date, { weekday: "short", day: "numeric", month: "short" })}</span>
+      <span class="t">${esc(s.topic)}</span>
+    </button>`; }).join("");
+  $("aatt").innerHTML = S.map((s, i) => { const st = aStats(i); return `
+    <div class="att-row ${s.n === curASess ? "on" : ""}" data-asess="${s.n}" role="button" tabindex="0" aria-label="Session ${s.n}: ${st.held ? `${st.att} attended, ${st.abs} absent` : "not held yet"}">
+      <span class="lab">S${s.n} · ${fmtDate(s.date, { day: "numeric", month: "short" })}</span>
+      <span class="bar">${st.held ? `<span class="c-att" style="width:${st.att / tot * 100}%" title="Attended ${st.att}"></span><span class="c-abs" style="width:${st.abs / tot * 100}%" title="Absent ${st.abs}"></span>` : ""}</span>
+      <span class="num">${st.held ? `${st.att}/${tot}` : "—"}</span>
+    </div>`; }).join("");
+  const i = curASess - 1, s = S[i], st = aStats(i);
+  $("asess").innerHTML = `
+    <div class="sess-head">
+      <div>
+        <div class="eyebrow">Session ${s.n} of ${S.length} · ${fmtDate(s.date, { weekday: "long", day: "numeric", month: "long", year: "numeric" })} · ${s.time}</div>
+        <h3>${esc(s.topic)}</h3>
+      </div>
+      <div class="ring" aria-label="${st.held ? `${st.att} of ${tot} attended` : "not held yet"}">${ring(st, 40, 8)}<div><span>${st.held ? st.att : "—"}<small>${st.held ? `of ${tot} attended` : "not held yet"}</small></span></div></div>
+    </div>
+    <div class="facts">
+      <div class="fact"><div class="k">Attendance</div><div class="v">${st.held ? `${st.att} attended · ${st.abs} absent${st.open ? ` · ${st.open} not marked` : ""}` : `${tot} expected · no excused (Sunday)`}</div><a class="lnk" data-go="#projects/agents/attendance">Open the tracker ›</a></div>
+      <div class="fact instr"><div class="k">${s.n === 2 ? "Mentor &amp; jury" : "Instructed by"}</div><div class="v"><button class="mname" data-mpop="agents"><i>GG</i><span>Gadim Gadimov</span></button></div></div>
+      ${s.duty.length ? `<div class="fact"><div class="k">Team on duty</div><div class="duty">${s.duty.map(id => { const m = TEAM.find(t => t.id === id); return m ? `<span class="duty-m" data-id="${m.id}" title="${esc(m.name)}">${avatar(m)}</span>` : ""; }).join("")}</div></div>` : ""}
+      ${s.pr ? `<div class="fact"><div class="k">PR on duty</div><div class="v">${esc(s.pr)}</div></div>` : ""}
+      <div class="fact"><div class="k">Venue</div><div class="v">${esc(s.venue)}</div></div>
+    </div>
+    <div class="covered"><div class="k">${st.held ? "Covered in this session" : "Planned for this session"}</div><ul>${s.plan.map(x => `<li>${esc(x)}</li>`).join("")}</ul></div>
+    <h4 style="margin-top:22px"><span>Photos</span></h4>
+    <div class="slot"><b>${st.held ? "Photos are on their way" : "After the session"}</b><span>Photos from Session ${s.n} will be sorted here, the same way as the bootcamp.</span></div>`;
+}
+document.addEventListener("click", e => { const b = e.target.closest("[data-asess]"); if (!b) return; curASess = +b.dataset.asess; renderASessions(); });
 
 /* ----- project details: everything that is not the overview ----- */
 function renderDetails(key) {
